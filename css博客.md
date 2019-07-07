@@ -231,6 +231,49 @@ text-align：center
 }
 ```
 
+### table
+
+html
+
+```css
+<div class='container'>
+  <div class='wrapper'>
+    <div class='headline'>
+     <span>这是标题</span>
+    </div>
+    <div class='content'>
+      <span>这是内容,这段文字在当前页面垂直水平       居中</span>
+    </div>
+  </div>
+</div>
+```
+
+css
+
+```css
+.container{
+  text-align:center;
+  width:500px;
+  border:3px solid yellow;
+  height:500px;
+  display:table;
+}
+
+.wrapper{
+  display:table-cell;
+  vertical-align:middle
+}
+.headline{
+  border:3px solid red;
+
+}
+.content{
+  border:3px solid green
+}
+```
+
+
+
 ### 块级元素
 
 通过计算
