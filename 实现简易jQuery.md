@@ -30,7 +30,7 @@ window.jQuery = function(nodeOrSelector){
     }
     
    
-    nodes.addClass = function(classes){
+    nodes.addClass = function(value){
         for(let i = 0; i < node.length; i++){
             nodes[i].classList.add(value)
         }
