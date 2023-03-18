@@ -2,8 +2,6 @@
 
 最近入职了一家新的公司，然后接触了新的项目，里面涉及到了不同部门和业务侧共同构建一个系统的问题，为了不同团队能够相互配合并独立开发和部署各自的模块，自然而然就使用了所谓的微前端的方案去解决这个问题
 
-
-
 ## 什么是微前端
 
 微前端是一种前端架构模式，旨在将大型Web应用程序分解为更小、可管理和可维护的部分。 它可以帮助团队以更加松散耦合的方式构建和交付不同的功能模块，每个模块都是独立开发、测试、运行和部署的。
@@ -20,15 +18,13 @@
 
 而目前东家实现微前端的方式是iframe
 
-
-
 ## 什么是`iframe`微前端
 
-这是实现微前端的其中一种方式。简单来说就是在A网站中通过各个`iframe`元素嵌入不同的网站，这些不同的网站往往是庞大系统中不同的模块，最后去构成一个完整的，规模较大的系统。而这些模块可能是不同的团队去构建，也可能使用了不同的技术栈，可以独立开发和部署
-
-
+这是实现微前端的其中一种方式。简单来说就是在A网站中通过各个`iframe`元素嵌入不同的网站（子应用），这些不同的网站是庞大系统中不同的模块，最后去构成一个完整的，规模较大的系统。而这些模块可能是不同的团队去构建，也可能使用了不同的技术栈，可以独立开发和部署。
 
 ## 介绍一下`iframe`元素
+
+要利用iframe元素构建微前端，首先得了解一下iframe元素的基础知识。
 
 当网页中包含一个iframe元素时，实际上是在当前页面中嵌入了一个独立的HTML文档。这种技术称为内嵌框架，可以用于在一个网页中同时显示多个网页或者在同一个页面内放置广告。
 
@@ -52,13 +48,35 @@ var iframe = document.getElementById('myFrame');
 var el = iframe.contentDocument.getElementById('some-element');
 ```
 
-需要注意的是，如果iframe元素中嵌入的文档和当前页面属于不同的域，那么它们之间的通信将会受到同源策略的限制。只有在同一域名下的文档才能相互访问和操作，如果需要在跨域的情况下进行通信，可以使用一些其他的技术手段，如postMessage API、跨域资源共享(CORS)等
-
-
+需要注意的是，如果iframe元素中嵌入的文档和当前页面属于不同的域，那么它们之间的通信将会受到同源策略的限制。只有在同一域名下的文档才能相互访问和操作，如果需要在跨域的情况下进行通信，可以使用一些其他的技术手段，如postMessage API、跨域资源共享(CORS)等。
 
 ## 引申：同一域名下的文档如何相互访问和操作
 
-同一域名下的文档相互访问和操作是指在两个或多个文档的URL协议、主机名和端口号都相同时，它们之间可以通过JavaScript进行相互访问和操作。
+事实上，在iframe应用和外层应用之间，如果是同源，可以进行文档之间的相互访问和操作，这个特性在构建iframe微前端系统的时候也是很有用的。
+
+首先先介绍一下，在同源的情况下，iframe父子窗口如何获取对方的窗口对象
+
+### iframe父子窗口如何获取对方的窗口对象
+
+1.获取iframe窗口对象
+
+在网站 B 中，如果它被嵌入到网站 A 的 iframe 中，可以通过 `window.parent`属性来获取包含它的窗口对象（即网站 A 的窗口对象）
+
+```jsx
+var parentWindow = window.parent;
+```
+
+2.iframe获取父窗口对象
+
+```jsx
+var iframeWindow = window.frames['iframeId'].contentWindow;
+```
+
+其中，`iframeId`是 `iframe`元素的 ID 属性
+
+然后，在上面的基础上，我们讲一下同一域名下的文档如何相互访问和操作：
+
+所谓同一域名下的文档相互访问和操作，是指在两个或多个文档的URL协议、主机名和端口号都相同时，它们之间可以通过JavaScript进行相互访问和操作。
 
 1.父窗口访问和操作`iframe`窗口
 
@@ -85,80 +103,28 @@ const parentElement = window.parent.document.getElementById('parent-element');
 parentElement.style.backgroundColor = 'red';
 ```
 
-
-
 ## iframe窗口和父窗口是如何通信的
+
+了解iframe窗口和父窗口是如何通信的也是构建iframe微前端系统的一个很关键的点
 
 这里将涉及到一个关键的API—`window.postMessage`
 
-### 作用
+## API作用
 
 可以实现在2个建立了联系（使用iframe或者window.open的方式）的窗口中进行通信（双方互传数据）
 
-### 前提
+## 前提
 
 在发送 `postMessage`消息之前，发送者和接收者需要先**建立联系**，也就是通过 `window.open()`或者 `iframe`这两种方法方式打开两个窗口
 
-### 安全实践（必须）
+## 安全实践（必须）
 
 1. 在发送 `postMessage` 消息时需要指定目标窗口的 origin，以保证只有指定来源的窗口才能接收到消息。
 2. 在接收 `postMessage` 消息时需要进行身份验证，避免受到来自不安全源的攻击。
 
-### 例子
+## 例子
 
-1.`window.open()` 方式
-
-在父窗口（A.html）中：
-
-```jsx
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Parent Window</title>
-</head>
-<body>
-    <h1>Parent Window</h1>
-    <button onclick="sendPostMessage()">Send Message to Child Window</button>
-    <script>
-        function sendPostMessage() {
-            const childWindow = window.open('<http://localhost:8080/B.html>', 'childWindow');
-            childWindow.postMessage('Hello from parent window!', '<http://localhost:8080>');
-        }
-    </script>
-</body>
-</html>
-```
-
-在子窗口（B.html）中：
-
-```jsx
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Child Window</title>
-</head>
-<body>
-    <h1>Child Window</h1>
-    <script>
-        window.addEventListener('message', function(event) {
-            if (event.origin !== '<http://localhost:8080>') {
-                return;
-            }
-
-            console.log('Receive message:', event.data);
-
-						// 回复消息
-					  var replyData = { message: 'Hi, example.com!' };
-					  event.source.postMessage(replyData, event.origin);
-        }, false);
-    </script>
-</body>
-</html>
-```
-
-2.`iframe`方式
+1.`iframe`方式
 
 前提：页面A和页面B在同一域名
 
@@ -212,29 +178,135 @@ html
 
 需要注意的是，`iframe` 的源必须与父窗口的源相同，否则 `postMessage` 将无法传递消息。另外，在进行跨域消息传递时，应该对消息来源进行验证，避免接收到来自不安全源的恶意消息。
 
-## iframe父子窗口如何获取对方的窗口对象
+2.`window.open()` 方式（虽然不是iframe的内容，但是很多时候也可能会用到）
 
-### 1.获取iframe窗口对象
-
-在网站 B 中，如果它被嵌入到网站 A 的 iframe 中，可以通过 `window.parent`属性来获取包含它的窗口对象（即网站 A 的窗口对象）
+在父窗口（A.html）中：
 
 ```jsx
-var parentWindow = window.parent;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Parent Window</title>
+</head>
+<body>
+    <h1>Parent Window</h1>
+    <button onclick="sendPostMessage()">Send Message to Child Window</button>
+    <script>
+        function sendPostMessage() {
+            const childWindow = window.open('<http://localhost:8080/B.html>', 'childWindow');
+            childWindow.postMessage('Hello from parent window!', '<http://localhost:8080>');
+        }
+    </script>
+</body>
+</html>
 ```
 
-### 2.iframe获取父窗口对象
+在子窗口（B.html）中：
 
 ```jsx
-var iframeWindow = window.frames['iframeId'].contentWindow;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Child Window</title>
+</head>
+<body>
+    <h1>Child Window</h1>
+    <script>
+        window.addEventListener('message', function(event) {
+            if (event.origin !== '<http://localhost:8080>') {
+                return;
+            }
+
+            console.log('Receive message:', event.data);
+
+						// 回复消息
+					  var replyData = { message: 'Hi, example.com!' };
+					  event.source.postMessage(replyData, event.origin);
+        }, false);
+    </script>
+</body>
+</html>
 ```
 
-其中，`iframeId`是 `iframe`元素的 ID 属性
+## 通过url查询参数实现父窗口向iframe子窗口传值
 
-### 拓展：通过window.open打开的网站如何获得来源
+还有一种父窗口向iframe子窗口通信的方式，就是设置iframe的src的时候，在url后面拼接上需要传递的数据的查询参数，然后子窗口（子应用）就能通过url拿到需要的数据去处理
 
-返回打开当前窗口的那个窗口的引用，例如：在 window A 中打开了 window B，B.opener 返回 A
+父窗口：
 
+```jsx
+let iframeChild1 = document.creatElement('iframe')
+iframeChild1.src = "www.xxx.com/xxx.html?data=xxx"
+document.body.appendChild(iframeChild1)
+```
 
+iframe子窗口
+
+```jsx
+console.log(location.search) // ?data=xxx
+console.log('子窗口可以拿到上面search的data数据去做一些操作') 
+```
+
+## 拓展1：`window.open`打开的网站除了`postMessage` API的另外一种通信方式
+
+和前面iframe父窗口通过**url查询参数传参**一样，A网站向B网站通信也有同样的方式
+
+在 A 网站中使用 `window.open`方法打开 B 网站，并将一个参数值传递给 B 网站的 URL。例如：
+
+```jsx
+var bWindow = window.open('<http://example.com/b.html?visited=true>');
+```
+
+另外，在**同源**的情况下，B网站可以使用`window.opener`对象那到A窗口的window对象，调用触发A网站的方法，给A网站传值，例子如下：
+
+1.在 B 网站中，获取 URL 参数值，并在加载完成后调用 `window.opener`对象的方法来告知 A 网站。例如：
+
+```jsx
+window.onload = function() {
+  // 获取 URL 参数值
+  var visited = window.location.search.includes('visited=true');
+  
+  // 如果 visited 参数为 true，就表示已经访问过 A 网站
+  if (visited) {
+    // 调用 opener 对象的方法
+    window.opener.handleVisitedB('data');
+  }
+};
+```
+
+2.在 A 网站中，在打开 B 网站时，定义一个名为 `handleVisitedB`的全局函数，并在该函数中执行相应的逻辑。例如：
+
+```jsx
+function handleVisitedB(data) {
+  // 打印B 网站传递过来的数据
+  console.log(data);  
+}
+```
+
+## 拓展2:**`Window.open()`**
+
+建议也了解一下这个API
+
+[Window.open() - Web API 接口参考 | MDN](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/open)
+
+## 总结
+
+利用iframe实现微前端，实际上就是利用在不同团队构建的工程中打包出的html网页在iframe元素中加载，从而实现在一个系统中嵌入不同子模块去搭建一个更加庞大和功能完备的系统的方案。
+
+这个过程中，我们主要需要了解的是：
+
+1. 什么是iframe
+2. iframe和父窗口**同源**的时候可以获取对方的窗口对象，可以相互访问和操作(操作对方的DOM和访问数据，访问对方数据和触发方法)
+3. iframe和父窗口**无论是否同源**的情况下都可以通过`window.postMessage` API的方式进行相互通信
+4. 父窗口可以通过设置iframe子窗口的url的查询参数，给子窗口通信
+
+拓展：`window.open`
+
+1. 如果是通过`window.open()`方式打开的子窗口，和上面`iframe`一样**无论是否同源**可以使用`window.postMessage` API的方式进行相互通信
+2. 通过`window.open()`方式打开的子窗口，可以在**同源**的情况下在打开窗口中使用`window.opener`拿到父窗口的window对象，调用window对象上的方法并传值给**来源网站传值**
+3. 父窗口可以通过设置`window.open(url,name)`API中url的查询参数，给子窗口通信
 
 ## 拓展阅读
 
@@ -253,7 +325,7 @@ var iframeWindow = window.frames['iframeId'].contentWindow;
 
 但是事实上，第二种框架集成的方式会更加方便和可控，比如使用微前端框架qiankun，很多东西，比如共享代码，路由方式切换子应用，子应用间的通信，整个app的监控方面都做了比较的集成。下面也简单介绍微前端框架qiankun
 
-### 关于微前端框架qiankun
+### 微前端框架qiankun
 
 qiankun是一个基于微前端架构的JavaScript框架，它由蚂蚁金服前端团队开发，旨在解决多个独立应用之间的集成问题。qiankun提供了一种简单、高效、稳定的前端微服务化方案，可以将多个独立的前端应用程序组合成一个整体，并且能够保持彼此独立
 
